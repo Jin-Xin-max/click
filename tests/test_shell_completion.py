@@ -128,6 +128,37 @@ def test_argument_order():
     assert _get_words(cli, ["x", "b"], "d") == ["d"]
 
 
+@pytest.mark.parametrize(
+    ("args", "incomplete", "expect"),
+    [
+        # Joined "--option=value" forms, as some shells pass the word.
+        ([], "--color=a", ["auto", "always"]),
+        ([], "--color=al", ["always"]),
+        ([], "--color=", ["auto", "always", "never"]),
+        # Split "--option value" forms, as bash passes after the "="
+        # word break.
+        (["--color"], "a", ["auto", "always"]),
+        (["--color"], "al", ["always"]),
+        (["--color"], "", ["auto", "always", "never"]),
+    ],
+)
+def test_long_option_value_with_equals(args, incomplete, expect):
+    """Regression test for issue #2847.
+
+    Long option completion must work when the value is attached with "="
+    (``--color=al``) as well as when it is a separate word (``--color al``).
+    The joined form is what some shells send to the completion script.
+    """
+    cli = Command(
+        "cli",
+        params=[
+            Option(["--color"], type=Choice(["auto", "always", "never"])),
+            Option(["--name"]),
+        ],
+    )
+    assert _get_words(cli, args, incomplete) == expect
+
+
 def test_argument_default():
     cli = Command(
         "cli",
